@@ -1,0 +1,49 @@
+# mq_prometheus (ibm-messaging/mq-metric-samples) — conexão ao IBM MQ.
+# Porta 9158 para não conflitar com o endpoint nativo do MQ (9157).
+# Métricas ibmmq_q_* e ibmmq_chl_* dependem de: (1) publicações $SYS e (2) object status (DISPLAY QSTATUS/CHSTATUS).
+# Se aparecer só go_*: aguarde 1–2 min (1ª coleta) ou confira logs (logLevel: DEBUG).
+
+global:
+  useObjectStatus: true
+  useResetQStats: false
+  usePublications: true
+  useStatistics: false
+  logLevel: INFO
+  metaprefix: ""
+  pollInterval: 30s
+  rediscoverInterval: 1h
+  tzOffset: 0h
+
+# Usuário admin necessário: o collector abre SYSTEM.ADMIN.COMMAND.QUEUE e tópicos $SYS (MQRC_NOT_AUTHORIZED com user app).
+connection:
+  queueManager: QM1
+  connName: ibmmq(1414)
+  channel: DEV.ADMIN.SVRCONN
+  user: admin
+  password: passw0rd
+  # Filas de resposta para publicações (default do sample; necessário para receber métricas $SYS).
+  replyQueue: SYSTEM.DEFAULT.MODEL.QUEUE
+
+objects:
+  queues:
+    - DEV.QUEUE.1
+    - DEV.QUEUE.2
+    - DEV.QUEUE.3
+  channels:
+    - SYSTEM.*
+    - TO.*
+
+filters:
+  hideSvrConnJobname: false
+  showInactiveChannels: true
+  queueSubscriptionSelector:
+    - PUT
+    - GET
+    - GENERAL
+
+prometheus:
+  port: 9158
+  metricsPath: "/metrics"
+  namespace: ibmmq
+  keepRunning: true
+  reconnectInterval: 5s

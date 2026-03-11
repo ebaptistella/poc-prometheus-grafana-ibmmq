@@ -1,0 +1,38 @@
+# Prometheus - coleta (scrape) de métricas do IBM MQ e do próprio Prometheus.
+# O IBM MQ expõe um endpoint HTTP em :9157/metrics; o Prometheus coleta periodicamente.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Regras de alerta (Status > Alerts no Prometheus; opcional: Alertmanager para notificações)
+rule_files:
+  - /etc/prometheus/alerts/*.yml
+
+scrape_configs:
+  # IBM MQ: o container expõe métricas na porta 9157 (MQ_ENABLE_METRICS=true).
+  # Prometheus acessa via rede Docker (ibmmq:9157) e armazena as séries.
+  - job_name: ibmmq
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    static_configs:
+      - targets: ["ibmmq:9157"]
+        labels:
+          queue_manager: "QM1"
+          component: "ibmmq"
+
+  # mq_prometheus (ibm-messaging/mq-metric-samples): métricas por fila/canal (ibmmq_*)
+  - job_name: mq_prometheus
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    static_configs:
+      - targets: ["mq_prometheus:9158"]
+        labels:
+          component: "mq_prometheus"
+
+  # Métricas do próprio Prometheus
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

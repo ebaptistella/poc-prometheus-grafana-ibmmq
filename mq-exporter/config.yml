@@ -1,0 +1,10 @@
+# mq_exporter — conexão ao IBM MQ (container ibmmq, config de desenvolvimento)
+queueManager: QM1
+user: app
+password: passw0rd
+connName: ibmmq(1414)
+channel: DEV.APP.SVRCONN
+queues:
+  - DEV.QUEUE.1
+  - DEV.QUEUE.2
+  - DEV.QUEUE.3

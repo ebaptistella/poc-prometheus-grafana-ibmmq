@@ -1,0 +1,1057 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 99,
+      "panels": [],
+      "title": "Status dos collectors",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "options": { "0": { "color": "red", "index": 0, "text": "DOWN" } }, "type": "value" },
+            { "options": { "1": { "color": "green", "index": 0, "text": "UP" } }, "type": "value" }
+          ],
+          "unit": "short",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 6, "x": 0, "y": 1 },
+      "id": 26,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [
+        { "expr": "up{job=\"ibmmq\"}", "legendFormat": "IBM MQ (porta 9157)", "refId": "A" }
+      ],
+      "title": "IBM MQ (métricas nativas)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "options": { "0": { "color": "red", "index": 0, "text": "DOWN" } }, "type": "value" },
+            { "options": { "1": { "color": "green", "index": 0, "text": "UP" } }, "type": "value" }
+          ],
+          "unit": "short",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 6, "x": 6, "y": 1 },
+      "id": 27,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [
+        { "expr": "up{job=\"mq_prometheus\"}", "legendFormat": "mq_prometheus (filas)", "refId": "A" }
+      ],
+      "title": "mq_prometheus (métricas por fila)",
+      "type": "stat"
+    },
+    {
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 4 },
+      "id": 29,
+      "options": { "content": "**Resumo executivo (topo):** visão rápida — filas com mensagens, canais não RUNNING, possível gargalo (msg &gt; 60s), conexões. **Variável Fila:** filtre painéis da seção \"Visão por fila\" por uma ou mais filas.\n\n**Fontes de métricas:** (1) **IBM MQ (porta 9157)** — endpoint nativo: CPU, RAM, Put/Get, conexões, disco, falhas MQI. (2) **mq_prometheus** (porta 9158) — métricas **por fila** (profundidade, handles, idade, put/get) e **por canal** (status).\n\n**Quando gráficos ficam em zero ou vazios:** (1) **Falhas MQI, Expiradas, Browse, FDC** — zero é esperado em ambiente saudável. (2) **Uso da capacidade da fila (%)** — vazio quando todas as filas têm profundidade ilimitada. (3) **Painéis \"Lag / profundidade\" e \"Status de canais\" com No data** — verifique se o container **mq_prometheus** está UP (Status dos collectors), se conecta ao QM (ibmmq:1414) e se as filas em `mq-prometheus/mq_prometheus.yaml` existem no QM. (4) **Conexões** — contador cumulativo (MQCONN/MQCONNX), não \"conexões ativas\".", "mode": "markdown" },
+      "title": "Como ler este dashboard",
+      "type": "text"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+      "id": 200,
+      "panels": [],
+      "title": "Resumo executivo",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 6, "x": 0, "y": 7 },
+      "id": 201,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [
+        { "expr": "count(ibmmq_queue_depth{job=\"mq_prometheus\"} > 0)", "legendFormat": "Filas com mensagens", "refId": "A" }
+      ],
+      "description": "Filas com profundidade (lag) > 0.",
+      "title": "Filas com mensagens",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "options": { "0": { "color": "green", "index": 0, "text": "0" } }, "type": "value" },
+            { "options": { "1": { "color": "yellow", "index": 1, "text": "1+" } }, "type": "value" }
+          ],
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 6, "x": 6, "y": 7 },
+      "id": 202,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [
+        { "expr": "count(ibmmq_channel_status_squash{job=\"mq_prometheus\"} != 1)", "legendFormat": "Canais não RUNNING", "refId": "A" }
+      ],
+      "description": "Canais com status diferente de RUNNING.",
+      "title": "Canais não RUNNING",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 6, "x": 12, "y": 7 },
+      "id": 203,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [
+        { "expr": "count(ibmmq_queue_depth{job=\"mq_prometheus\"} > 0 and on(queue,qmgr) (ibmmq_queue_oldest_message_age{job=\"mq_prometheus\"} > 60))", "legendFormat": "Filas com msg > 60s", "refId": "A" }
+      ],
+      "description": "Filas com mensagens e idade da mais antiga > 60s (possível gargalo).",
+      "title": "Possível gargalo (idade > 60s)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 6, "x": 18, "y": 7 },
+      "id": 204,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [
+        { "expr": "ibmmq_qmgr_connection_count", "legendFormat": "Conexões", "refId": "A" }
+      ],
+      "description": "Número de conexões no QM (mq_prometheus).",
+      "title": "Conexões ativas",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 },
+      "id": 100,
+      "panels": [],
+      "title": "Visão geral (CPU, RAM, sistema)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 11 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        {
+          "expr": "ibmmq_qmgr_cpu_load_one_minute_average_percentage",
+          "legendFormat": "CPU 1 min",
+          "refId": "A"
+        },
+        {
+          "expr": "ibmmq_qmgr_cpu_load_five_minute_average_percentage",
+          "legendFormat": "CPU 5 min",
+          "refId": "B"
+        },
+        {
+          "expr": "ibmmq_qmgr_cpu_load_fifteen_minute_average_percentage",
+          "legendFormat": "CPU 15 min",
+          "refId": "C"
+        }
+      ],
+      "title": "Carga CPU (média 1/5/15 min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 11 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "ibmmq_qmgr_ram_free_percentage", "legendFormat": "RAM livre %", "refId": "A" }
+      ],
+      "title": "RAM livre (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 11 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "ibmmq_qmgr_user_cpu_time_percentage", "legendFormat": "User CPU", "refId": "A" },
+        { "expr": "ibmmq_qmgr_system_cpu_time_percentage", "legendFormat": "System CPU", "refId": "B" }
+      ],
+      "title": "CPU user vs system (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 11 },
+      "id": 4,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        {
+          "expr": "ibmmq_qmgr_ram_usage_estimate_for_queue_manager_bytes",
+          "legendFormat": "RAM QM (bytes)",
+          "refId": "A"
+        }
+      ],
+      "title": "Uso de RAM do Queue Manager",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "id": 101,
+      "panels": [],
+      "title": "Operações MQI (put, get, commit, conexões)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 17 },
+      "id": 5,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        {
+          "expr": "rate(ibmmq_qmgr_mqput_mqput1_total[5m])",
+          "legendFormat": "Put/s",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(ibmmq_qmgr_destructive_get_total[5m])",
+          "legendFormat": "Get destrutivo/s",
+          "refId": "B"
+        }
+      ],
+      "title": "Taxa Put e Get (por segundo)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 17 },
+      "id": 6,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "increase(ibmmq_qmgr_commit_total[5m])", "legendFormat": "Commits", "refId": "A" },
+        { "expr": "increase(ibmmq_qmgr_rollback_total[5m])", "legendFormat": "Rollbacks", "refId": "B" }
+      ],
+      "title": "Commit e Rollback (a cada 5 min)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 17 },
+      "id": 7,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "ibmmq_qmgr_mqconn_mqconnx_total", "legendFormat": "MQCONN/MQCONNX (contador)", "refId": "A" },
+        { "expr": "rate(ibmmq_qmgr_mqopen_total[5m])", "legendFormat": "MQOPEN/s", "refId": "B" },
+        { "expr": "rate(ibmmq_qmgr_mqclose_total[5m])", "legendFormat": "MQCLOSE/s", "refId": "C" }
+      ],
+      "title": "Conexões (contador) e open/close",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
+      "id": 102,
+      "panels": [],
+      "title": "Mensagens (bytes e contagens)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "Bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 12, "x": 0, "y": 23 },
+      "id": 8,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        {
+          "expr": "rate(ibmmq_qmgr_mqput_mqput1_bytes_total[5m])",
+          "legendFormat": "Put bytes/s",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(ibmmq_qmgr_destructive_get_bytes_total[5m])",
+          "legendFormat": "Get bytes/s",
+          "refId": "B"
+        }
+      ],
+      "title": "Throughput Put/Get (bytes/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 23 },
+      "id": 9,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        {
+          "expr": "rate(ibmmq_qmgr_persistent_message_mqput_total[5m])",
+          "legendFormat": "Persistent put/s",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(ibmmq_qmgr_non_persistent_message_mqput_total[5m])",
+          "legendFormat": "Non-persistent put/s",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(ibmmq_qmgr_published_to_subscribers_message_total[5m])",
+          "legendFormat": "Publicados (topic)/s",
+          "refId": "C"
+        }
+      ],
+      "title": "Mensagens persistentes, não persistentes e pub/sub",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 },
+      "id": 103,
+      "panels": [],
+      "title": "Sistema de arquivos e log",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 29 },
+      "id": 10,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        {
+          "expr": "ibmmq_qmgr_queue_manager_file_system_free_space_percentage",
+          "legendFormat": "QM FS livre %",
+          "refId": "A"
+        },
+        {
+          "expr": "ibmmq_qmgr_log_file_system_free_space_percentage",
+          "legendFormat": "Log FS livre %",
+          "refId": "B"
+        },
+        {
+          "expr": "ibmmq_qmgr_errors_file_system_free_space_percentage",
+          "legendFormat": "Errors FS livre %",
+          "refId": "C"
+        }
+      ],
+      "title": "Espaço livre em disco (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 29 },
+      "id": 11,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "ibmmq_qmgr_log_write_latency_seconds", "legendFormat": "Latência escrita log", "refId": "A" },
+        { "expr": "ibmmq_qmgr_log_slowest_write_since_restart_seconds", "legendFormat": "Pior escrita desde restart", "refId": "B" }
+      ],
+      "title": "Latência do log",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 29 },
+      "id": 12,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "ibmmq_qmgr_log_in_use_bytes", "legendFormat": "Log em uso", "refId": "A" },
+        { "expr": "ibmmq_qmgr_log_file_system_in_use_bytes", "legendFormat": "Log FS em uso", "refId": "B" },
+        { "expr": "ibmmq_qmgr_queue_manager_file_system_in_use_bytes", "legendFormat": "QM FS em uso", "refId": "C" }
+      ],
+      "title": "Uso de disco (bytes)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "id": 104,
+      "panels": [],
+      "title": "Falhas e erros MQI",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 12, "x": 0, "y": 35 },
+      "id": 13,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "increase(ibmmq_qmgr_failed_mqput_total[5m])", "legendFormat": "Failed MQPUT", "refId": "A" },
+        { "expr": "increase(ibmmq_qmgr_failed_mqget_total[5m])", "legendFormat": "Failed MQGET", "refId": "B" },
+        { "expr": "increase(ibmmq_qmgr_failed_mqconn_mqconnx_total[5m])", "legendFormat": "Failed MQCONN", "refId": "C" },
+        { "expr": "increase(ibmmq_qmgr_failed_mqopen_total[5m])", "legendFormat": "Failed MQOPEN", "refId": "D" }
+      ],
+      "title": "Falhas MQI (put, get, conn, open) – últimos 5 min",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 35 },
+      "id": 14,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "ibmmq_qmgr_expired_message_total", "legendFormat": "Mensagens expiradas", "refId": "A" },
+        { "expr": "ibmmq_qmgr_failed_browse_total", "legendFormat": "Browse falhou", "refId": "B" },
+        { "expr": "ibmmq_qmgr_fdc_files", "legendFormat": "Arquivos FDC", "refId": "C" }
+      ],
+      "title": "Expiradas, browse e FDC",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 40 },
+      "id": 105,
+      "panels": [],
+      "title": "Outras operações MQI",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 12, "x": 0, "y": 41 },
+      "id": 15,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "rate(ibmmq_qmgr_mqctl_total[5m])", "legendFormat": "MQCTL/s", "refId": "A" },
+        { "expr": "rate(ibmmq_qmgr_mqinq_total[5m])", "legendFormat": "MQINQ/s", "refId": "B" },
+        { "expr": "rate(ibmmq_qmgr_mqset_total[5m])", "legendFormat": "MQSET/s", "refId": "C" },
+        { "expr": "rate(ibmmq_qmgr_mqcb_total[5m])", "legendFormat": "MQCB/s", "refId": "D" }
+      ],
+      "title": "MQCTL, MQINQ, MQSET, MQCB",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 41 },
+      "id": 16,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "rate(ibmmq_qmgr_persistent_message_browse_total[5m])", "legendFormat": "Browse persist/s", "refId": "A" },
+        { "expr": "rate(ibmmq_qmgr_non_persistent_message_browse_total[5m])", "legendFormat": "Browse non-persist/s", "refId": "B" },
+        { "expr": "increase(ibmmq_qmgr_purged_queue_total[5m])", "legendFormat": "Filas purgadas", "refId": "C" }
+      ],
+      "title": "Browse e purge",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 46 },
+      "id": 106,
+      "panels": [],
+      "title": "Canais e conexões",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 47 },
+      "id": 17,
+      "options": { "content": "**Conexões (abaixo):** métricas do endpoint nativo (porta 9157) — total de conexões e taxa de conexões/desconexões.\n\n**Status de canais (painéis abaixo):** o **mq_prometheus** (porta 9158) expõe `ibmmq_channel_status` (código numérico) e `ibmmq_channel_status_squash` (1=RUNNING, 2=em transição, 3=STOPPED). Canais desconectados = status diferente de RUNNING.", "mode": "markdown" },
+      "title": "Sobre métricas de canais",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 50 },
+      "id": 18,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [
+        { "expr": "ibmmq_qmgr_mqconn_mqconnx_total", "legendFormat": "MQCONN/MQCONNX (contador)", "refId": "A" }
+      ],
+      "description": "Contador cumulativo de conexões (MQCONN/MQCONNX), não é número de conexões ativas. Valor baixo ou zero é normal logo após o restart do QM.",
+      "title": "Total de conexões (MQCONN/MQCONNX)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 50 },
+      "id": 19,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "rate(ibmmq_qmgr_mqconn_mqconnx_total[5m])", "legendFormat": "Novas conexões/s", "refId": "A" },
+        { "expr": "rate(ibmmq_qmgr_mqdisc_total[5m])", "legendFormat": "Desconexões (MQDISC)/s", "refId": "B" }
+      ],
+      "title": "Taxa de conexões e desconexões",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 50 },
+      "id": 20,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "rate(ibmmq_qmgr_mqopen_total[5m])", "legendFormat": "MQOPEN/s (aberturas)", "refId": "A" },
+        { "expr": "rate(ibmmq_qmgr_mqclose_total[5m])", "legendFormat": "MQCLOSE/s (fechamentos)", "refId": "B" }
+      ],
+      "title": "Abertura/fechamento de objetos (por canal)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 55 },
+      "id": 107,
+      "panels": [],
+      "title": "Lag / profundidade das filas",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 56 },
+      "id": 21,
+      "options": { "content": "**Lag de fila** = número de mensagens na fila (profundidade). Métricas do **mq_prometheus** (mq-metric-samples): `ibmmq_queue_depth`, `ibmmq_queue_attribute_max_depth`, etc. Os alertas de lag (grupo `ibmmq_queue_lag`) disparam quando depth > 500 (warning) ou > 5000 (critical). **Onde ver os alertas:** painel \"Alertas de lag (firing)\" abaixo ou **Prometheus → Status → Alerts** (http://localhost:9090/alerts).", "mode": "markdown" },
+      "title": "Sobre lag e profundidade (mq_prometheus)",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "options": { "1": { "color": "red", "index": 0, "text": "FIRING" } }, "type": "value" }
+          ],
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 59 },
+      "id": 30,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [
+        {
+          "expr": "ALERTS{alertstate=\"firing\", alertname=~\"IBMMQQueueDepth.*|IBMMQQueueDepthNearMax\"}",
+          "legendFormat": "{{ alertname }} — {{ qmgr }} / {{ queue }}",
+          "refId": "A"
+        }
+      ],
+      "description": "Alertas do Prometheus em estado firing (lag alto ou profundidade próxima do máximo). Lista completa: Prometheus → Status → Alerts.",
+      "title": "Alertas de lag (firing)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 61 },
+      "id": 22,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "ibmmq_queue_depth{job=\"mq_prometheus\"}", "legendFormat": "{{ qmgr }} / {{ queue }} (current)", "refId": "A" },
+        { "expr": "ibmmq_queue_attribute_max_depth{job=\"mq_prometheus\"}", "legendFormat": "{{ qmgr }} / {{ queue }} (max)", "refId": "B" }
+      ],
+      "title": "Profundidade (lag) por fila — mq_prometheus",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 67 },
+      "id": 28,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        {
+          "expr": "ibmmq_queue_attribute_max_depth{job=\"mq_prometheus\"} > 0 and (ibmmq_queue_depth{job=\"mq_prometheus\"} / ibmmq_queue_attribute_max_depth{job=\"mq_prometheus\"}) * 100",
+          "legendFormat": "{{ qmgr }} / {{ queue }}",
+          "refId": "A"
+        }
+      ],
+      "description": "Só exibe filas com profundidade máxima definida (ibmmq_queue_attribute_max_depth &gt; 0). Filas ilimitadas não aparecem — gráfico vazio é esperado nesse caso.",
+      "title": "Uso da capacidade da fila (%) — current/max (alerta &gt; 80%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 76 },
+      "id": 23,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [
+        { "expr": "count(ibmmq_queue_depth{job=\"mq_prometheus\"})", "legendFormat": "Filas monitoradas", "refId": "A" }
+      ],
+      "description": "Número de filas com métricas expostas pelo mq_prometheus.",
+      "title": "Filas monitoradas (mq_prometheus)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 76 },
+      "id": 24,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "ibmmq_queue_input_handles{job=\"mq_prometheus\"}", "legendFormat": "{{ qmgr }} / {{ queue }} (input)", "refId": "A" }
+      ],
+      "title": "Aberturas para leitura (open input)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 76 },
+      "id": 25,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "ibmmq_queue_output_handles{job=\"mq_prometheus\"}", "legendFormat": "{{ qmgr }} / {{ queue }} (output)", "refId": "A" }
+      ],
+      "title": "Aberturas para escrita (open output)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 80 },
+      "id": 108,
+      "panels": [],
+      "title": "Status de canais (mq_prometheus)",
+      "type": "row"
+    },
+    {
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 81 },
+      "id": 31,
+      "options": { "content": "Métricas do **mq_prometheus** (porta 9158). `ibmmq_channel_status_squash`: **1** = RUNNING, **2** = em transição, **3** = STOPPED/Inactive. Canais monitorados em `mq_prometheus.yaml` (objects.channels).", "mode": "markdown" },
+      "title": "Sobre status de canais",
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 83 },
+      "id": 32,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [
+        { "expr": "count(ibmmq_channel_status_squash{job=\"mq_prometheus\"} == 1)", "legendFormat": "RUNNING", "refId": "A" }
+      ],
+      "title": "Canais RUNNING",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 83 },
+      "id": 33,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "targets": [
+        { "expr": "count(ibmmq_channel_status_squash{job=\"mq_prometheus\"} != 1)", "legendFormat": "Não RUNNING", "refId": "A" }
+      ],
+      "description": "Canais com status diferente de RUNNING (ex.: Inactive, Stopped, Retrying).",
+      "title": "Canais não RUNNING",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 83 },
+      "id": 34,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "ibmmq_channel_status_squash{job=\"mq_prometheus\"}", "legendFormat": "{{ channel }} ({{ connname }}) — squash", "refId": "A" }
+      ],
+      "title": "Status squash por canal (1=RUNNING, 2=transição, 3=STOPPED)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 72 },
+      "id": 35,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "ibmmq_queue_oldest_message_age{job=\"mq_prometheus\"}", "legendFormat": "{{ qmgr }} / {{ queue }}", "refId": "A" }
+      ],
+      "description": "Idade em segundos da mensagem mais antiga na fila (métrica do mq_prometheus).",
+      "title": "Idade da mensagem mais antiga na fila (s)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 90 },
+      "id": 300,
+      "panels": [],
+      "title": "Visão por fila (cruzamento de métricas)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "align": "auto", "displayMode": "auto" },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 91 },
+      "id": 301,
+      "options": { "cellHeight": "sm", "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false }, "showHeader": true },
+      "targets": [
+        { "expr": "ibmmq_queue_depth{job=\"mq_prometheus\", queue=~\"$queue\"}", "format": "table", "instant": true, "legendFormat": "Depth", "refId": "A" },
+        { "expr": "ibmmq_queue_attribute_max_depth{job=\"mq_prometheus\", queue=~\"$queue\"}", "format": "table", "instant": true, "legendFormat": "Max depth", "refId": "B" },
+        { "expr": "ibmmq_queue_oldest_message_age{job=\"mq_prometheus\", queue=~\"$queue\"}", "format": "table", "instant": true, "legendFormat": "Idade (s)", "refId": "C" },
+        { "expr": "ibmmq_queue_input_handles{job=\"mq_prometheus\", queue=~\"$queue\"}", "format": "table", "instant": true, "legendFormat": "Input", "refId": "D" },
+        { "expr": "ibmmq_queue_output_handles{job=\"mq_prometheus\", queue=~\"$queue\"}", "format": "table", "instant": true, "legendFormat": "Output", "refId": "E" }
+      ],
+      "title": "Resumo por fila (depth, max, idade, handles) — use variável Fila para filtrar",
+      "transformations": [
+        { "id": "merge", "options": {} }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 97 },
+      "id": 302,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "rate(ibmmq_queue_mqput_mqput1_count{job=\"mq_prometheus\", queue=~\"$queue\"}[5m])", "legendFormat": "{{ qmgr }} / {{ queue }} Put/s", "refId": "A" },
+        { "expr": "rate(ibmmq_queue_mqget_count{job=\"mq_prometheus\", queue=~\"$queue\"}[5m])", "legendFormat": "{{ qmgr }} / {{ queue }} Get/s", "refId": "B" }
+      ],
+      "description": "Throughput Put e Get por fila (últimos 5 min). Put &gt; Get = tendência de acúmulo.",
+      "title": "Put vs Get por fila (msg/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 97 },
+      "id": 303,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "targets": [
+        { "expr": "rate(ibmmq_queue_mqput_bytes{job=\"mq_prometheus\", queue=~\"$queue\"}[5m])", "legendFormat": "{{ qmgr }} / {{ queue }} Put B/s", "refId": "A" },
+        { "expr": "rate(ibmmq_queue_mqget_bytes{job=\"mq_prometheus\", queue=~\"$queue\"}[5m])", "legendFormat": "{{ qmgr }} / {{ queue }} Get B/s", "refId": "B" }
+      ],
+      "description": "Throughput em bytes por fila (últimos 5 min).",
+      "title": "Put vs Get por fila (bytes/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "align": "auto", "displayMode": "auto" },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 103 },
+      "id": 304,
+      "options": { "cellHeight": "sm", "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false }, "showHeader": true },
+      "targets": [
+        { "expr": "(ibmmq_queue_depth{job=\"mq_prometheus\"} > 0 and on(queue,qmgr) (ibmmq_queue_oldest_message_age{job=\"mq_prometheus\"} > 60)) * ibmmq_queue_oldest_message_age{job=\"mq_prometheus\"}", "format": "table", "instant": true, "legendFormat": "", "refId": "A" }
+      ],
+      "description": "Filas com mensagens (depth &gt; 0) e idade da mais antiga &gt; 60s — possível gargalo ou consumer lento.",
+      "title": "Filas com possível gargalo (depth &gt; 0 e msg &gt; 60s)",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["ibmmq", "prometheus", "poc"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": true, "text": "Prometheus", "value": "prometheus" },
+        "hide": 2,
+        "includeAll": false,
+        "label": "Datasource",
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "allValue": ".*",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Fila",
+        "multi": true,
+        "name": "queue",
+        "options": [],
+        "query": "label_values(ibmmq_queue_depth{job=\"mq_prometheus\"}, queue)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "IBM MQ – Métricas do Queue Manager",
+  "uid": "ibmmq-metrics",
+  "version": 5,
+  "weekStart": ""
+}

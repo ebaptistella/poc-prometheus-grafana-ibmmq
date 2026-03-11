@@ -1,0 +1,178 @@
+# POC: IBM MQ + Prometheus + Grafana
+# Simula ambiente para coleta de métricas do IBM MQ via Prometheus e visualização no Grafana.
+
+services:
+  ibmmq:
+    image: icr.io/ibm-messaging/mq:9.4.0.17-r2
+    platform: linux/amd64   # imagem sem arm64; emulação no Apple Silicon
+    container_name: ibmmq
+    hostname: ibmmq
+    secrets:
+      - source: mq_admin_password
+        target: mqAdminPassword
+      - source: mq_app_password
+        target: mqAppPassword
+    environment:
+      LICENSE: accept
+      MQ_QMGR_NAME: QM1
+      # Habilita endpoint de métricas Prometheus na porta 9157
+      MQ_ENABLE_METRICS: "true"
+      # Configuração de desenvolvimento (filas e canais padrão)
+      MQ_DEV: "true"
+    ports:
+      - "1414:1414"   # MQ listener
+      - "9443:9443"   # MQ Web Console (https://localhost:9443/ibmmq/console)
+      - "9157:9157"   # Métricas Prometheus
+    healthcheck:
+      test: ["CMD", "chkmqready", "-s"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - monitoring
+
+  # mq_prometheus (ibm-messaging/mq-metric-samples): métricas IBM MQ para Prometheus. Porta 9158.
+  mq_prometheus:
+    build:
+      context: https://github.com/ibm-messaging/mq-metric-samples.git
+    image: poc-mq-prometheus:latest
+    pull_policy: never
+    platform: linux/amd64
+    container_name: mq_prometheus
+    hostname: mq_prometheus
+    volumes:
+      - ./mq-prometheus/mq_prometheus.yaml:/opt/config/mq_prometheus.yaml:ro
+    ports:
+      - "9158:9158"
+    depends_on:
+      ibmmq:
+        condition: service_healthy
+    networks:
+      - monitoring
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    hostname: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+      - --web.enable-admin-api
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      ibmmq:
+        condition: service_healthy
+      mq_prometheus:
+        condition: service_started
+    networks:
+      - monitoring
+
+  # App (producer/consumer) – build: docker compose build app
+  # Producer:  docker compose run --rm app
+  # Consumer:  docker compose run --rm app com.poc.mq.Consumer 10000
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    image: poc-mq-app:latest
+    environment:
+      MQ_QMGR: QM1
+      MQ_HOST: ibmmq
+      MQ_PORT: "1414"
+      MQ_CHANNEL: DEV.APP.SVRCONN
+      MQ_QUEUE: DEV.QUEUE.1
+      MQ_USER: app
+      MQ_PASSWORD: passw0rd
+    depends_on:
+      ibmmq:
+        condition: service_healthy
+    networks:
+      - monitoring
+    profiles:
+      - app   # não sobe com 'up'; use: docker compose --profile app run --rm app
+
+  # Demo: producer em modo aleatório (10 msgs por janela, intervalo 3–15 s entre janelas). Sobe com: make demo
+  producer-loop:
+    image: poc-mq-app:latest
+    command: ["com.poc.mq.Producer", "random", "10", "3", "15"]
+    environment:
+      MQ_QMGR: QM1
+      MQ_HOST: ibmmq
+      MQ_PORT: "1414"
+      MQ_CHANNEL: DEV.APP.SVRCONN
+      MQ_QUEUE: DEV.QUEUE.1
+      MQ_USER: app
+      MQ_PASSWORD: passw0rd
+      # Opcional: PRODUCER_INTERVAL_MIN=3, PRODUCER_INTERVAL_MAX=15
+    depends_on:
+      ibmmq:
+        condition: service_healthy
+    networks:
+      - monitoring
+    profiles:
+      - demo
+
+  # Demo: consumer em loop (timeout 3s, log a cada 100 msgs para drenar mais rápido). Sobe com: make demo
+  consumer-loop:
+    image: poc-mq-app:latest
+    entrypoint: ["sh", "-c"]
+    command: ["while true; do java -cp /app/app.jar com.poc.mq.Consumer 3000 100; sleep 1; done"]
+    environment:
+      MQ_QMGR: QM1
+      MQ_HOST: ibmmq
+      MQ_PORT: "1414"
+      MQ_CHANNEL: DEV.APP.SVRCONN
+      MQ_QUEUE: DEV.QUEUE.1
+      MQ_USER: app
+      MQ_PASSWORD: passw0rd
+    depends_on:
+      ibmmq:
+        condition: service_healthy
+    networks:
+      - monitoring
+    profiles:
+      - demo
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    hostname: grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_HTTP_PORT: 3000
+      # Datasource Prometheus pré-configurado via provisioning
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+# Senhas para IBM MQ 9.4+ (admin e app). Crie com: make secrets
+secrets:
+  mq_admin_password:
+    file: ./secrets/mqAdminPassword
+  mq_app_password:
+    file: ./secrets/mqAppPassword
+
+networks:
+  monitoring:
+    driver: bridge

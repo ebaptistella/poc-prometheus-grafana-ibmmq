@@ -1,0 +1,14 @@
+# Provisioning de dashboards: carrega todos os JSON da pasta default/
+apiVersion: 1
+
+providers:
+  - name: default
+    orgId: 1
+    folder: IBM MQ
+    folderUid: ibmmq
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/default

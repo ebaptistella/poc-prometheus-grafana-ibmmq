@@ -1,0 +1,138 @@
+# Regras de alerta baseadas nas métricas do IBM MQ (endpoint nativo :9157)
+# Os alertas ficam em "Firing" no Prometheus (Status > Alerts). Para enviar
+# para Slack/email, configure o Alertmanager e aponte o Prometheus a ele.
+
+groups:
+  - name: ibmmq_availability
+    interval: 30s
+    rules:
+      - alert: IBMMQDown
+        expr: up{job="ibmmq"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "IBM MQ indisponível"
+          description: "O target ibmmq:9157 está down ou inacessível há mais de 1 minuto."
+
+      - alert: MQPrometheusDown
+        expr: up{job="mq_prometheus"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "mq_prometheus indisponível"
+          description: "O collector mq_prometheus (mq-metric-samples) está down ou inacessível. Alertas de profundidade/lag podem não estar ativos."
+
+  - name: ibmmq_resources
+    interval: 30s
+    rules:
+      - alert: IBMMQHighCPU
+        expr: ibmmq_qmgr_cpu_load_one_minute_average_percentage > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU do IBM MQ alta"
+          description: "Carga CPU (1 min) do queue manager está acima de 80% (atual: {{ $value }}%)."
+
+      - alert: IBMMQLowRAM
+        expr: ibmmq_qmgr_ram_free_percentage < 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pouca RAM livre no IBM MQ"
+          description: "RAM livre está abaixo de 10% (atual: {{ $value }}%)."
+
+      - alert: IBMMQLowDiskQM
+        expr: ibmmq_qmgr_queue_manager_file_system_free_space_percentage < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pouco espaço em disco (QM) no IBM MQ"
+          description: "Espaço livre no sistema de arquivos do queue manager está abaixo de 15% (atual: {{ $value }}%)."
+
+      - alert: IBMMQLowDiskLog
+        expr: ibmmq_qmgr_log_file_system_free_space_percentage < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pouco espaço em disco (log) no IBM MQ"
+          description: "Espaço livre no sistema de arquivos de log está abaixo de 15% (atual: {{ $value }}%)."
+
+  - name: ibmmq_failures
+    interval: 30s
+    rules:
+      - alert: IBMMQFailedConnections
+        expr: increase(ibmmq_qmgr_failed_mqconn_mqconnx_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Falhas de conexão MQ (MQCONN)"
+          description: "Houve falhas de MQCONN/MQCONNX nos últimos 5 minutos. Verifique credenciais e canal."
+
+      - alert: IBMMQFailedPut
+        expr: increase(ibmmq_qmgr_failed_mqput_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Muitas falhas de MQPUT"
+          description: "Mais de 5 falhas de MQPUT nos últimos 5 minutos (atual: {{ $value }})."
+
+      - alert: IBMMQFailedGet
+        expr: increase(ibmmq_qmgr_failed_mqget_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Muitas falhas de MQGET"
+          description: "Mais de 5 falhas de MQGET nos últimos 5 minutos (atual: {{ $value }})."
+
+  - name: ibmmq_performance
+    interval: 30s
+    rules:
+      - alert: IBMMQLogWriteLatencyHigh
+        expr: ibmmq_qmgr_log_write_latency_seconds > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latência de escrita do log alta"
+          description: "Latência de escrita do log do MQ está acima de 1s (atual: {{ $value }}s)."
+
+  # Lag / profundidade de filas — métricas do mq_prometheus (ibmmq_queue_depth, ibmmq_queue_attribute_max_depth)
+  - name: ibmmq_queue_lag
+    interval: 30s
+    rules:
+      - alert: IBMMQQueueDepthHigh
+        expr: ibmmq_queue_depth > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Profundidade (lag) da fila alta"
+          description: "Fila {{ $labels.queue }} no QM {{ $labels.qmgr }} tem {{ $value }} mensagens (limite 500). Ajuste o threshold ou a fila."
+
+      - alert: IBMMQQueueDepthCritical
+        expr: ibmmq_queue_depth > 5000
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Profundidade (lag) da fila muito alta"
+          description: "Fila {{ $labels.queue }} no QM {{ $labels.qmgr }} tem {{ $value }} mensagens (limite 5000). Verifique consumers e capacidade."
+
+      # Profundidade próxima do máximo (ibmmq_queue_attribute_max_depth)
+      - alert: IBMMQQueueDepthNearMax
+        expr: ibmmq_queue_attribute_max_depth > 0 and (ibmmq_queue_depth / ibmmq_queue_attribute_max_depth) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Profundidade da fila próxima do máximo"
+          description: "Fila {{ $labels.queue }} (QM {{ $labels.qmgr }}) está acima de 80% do máximo. Risco de rejeição de mensagens (MQRC_Q_FULL)."

@@ -1,0 +1,15 @@
+# Secrets (não versionar senhas)
+secrets/*
+
+# Manter o diretório
+!secrets/.gitkeep
+
+# Dados locais dos containers
+prometheus_data/
+grafana_data/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+.cursor/
