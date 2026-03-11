@@ -1,8 +1,8 @@
 # POC: IBM MQ + Prometheus + Grafana
 
-Ambiente local que simula **IBM MQ** com coleta de métricas via **Prometheus** e visualização no **Grafana**.
+Local setup that runs **IBM MQ** with metrics collection via **Prometheus** and visualization in **Grafana**.
 
-## Arquitetura
+## Architecture
 
 ```
 ┌─────────────┐     scrape      ┌────────────┐     query      ┌─────────┐
@@ -11,177 +11,179 @@ Ambiente local que simula **IBM MQ** com coleta de métricas via **Prometheus** 
 └─────────────┘                 └────────────┘                └─────────┘
 ```
 
-- **IBM MQ** (imagem oficial `icr.io/ibm-messaging/mq:9.4.x`): queue manager com endpoint de métricas Prometheus na porta **9157** (`MQ_ENABLE_METRICS=true`).
-- **mq_prometheus** ([ibm-messaging/mq-metric-samples](https://github.com/ibm-messaging/mq-metric-samples)): collector que conecta ao MQ como cliente e expõe métricas **por fila** (profundidade, handles) e **por canal** na porta **9158**. Build a partir do repositório GitHub; config em `mq-prometheus/mq_prometheus.yaml`.
-- **Prometheus**: coleta métricas do MQ (9157) e do mq_prometheus (9158); armazena séries temporais.
-- **Grafana**: datasource Prometheus já provisionado; login `admin` / `admin`.
+- **IBM MQ** (official image `icr.io/ibm-messaging/mq:9.4.x`): queue manager with a Prometheus metrics endpoint on port **9157** (`MQ_ENABLE_METRICS=true`).
+- **mq_prometheus** ([ibm-messaging/mq-metric-samples](https://github.com/ibm-messaging/mq-metric-samples)): collector that connects to MQ as a client and exposes metrics **per queue** (depth, handles) and **per channel** on port **9158**. Built from the GitHub repo; config in `mq-prometheus/mq_prometheus.yaml`.
+- **Prometheus**: scrapes metrics from MQ (9157) and mq_prometheus (9158); stores time series.
+- **Grafana**: Prometheus datasource provisioned by default; login `admin` / `admin`.
 
-## Pré-requisitos
+## Prerequisites
 
-- Docker e Docker Compose
-- Para IBM MQ 9.4+, é necessário aceitar a licença (variável `LICENSE=accept` já está no compose) e fornecer senhas via **secrets**
+- Docker and Docker Compose
+- For IBM MQ 9.4+, you must accept the license (variable `LICENSE=accept` is set in the compose file) and provide passwords via **secrets**
 
-## Uso rápido
+## Quick start
 
-### 1. Criar os secrets (obrigatório na primeira vez)
+### 1. Create secrets (required the first time)
 
-O IBM MQ 9.4 exige senhas via Docker secrets. Crie os arquivos:
+IBM MQ 9.4 requires passwords via Docker secrets. Create the files:
 
 ```bash
 make secrets
-# ou manualmente:
+# or manually:
 mkdir -p secrets
 printf '%s' 'passw0rd' > secrets/mqAdminPassword
 printf '%s' 'passw0rd' > secrets/mqAppPassword
 ```
 
-### 2. Subir o ambiente
+### 2. Start the environment
 
-Na primeira vez (ou ao alterar a versão do collector), construa a imagem do **mq_prometheus** (build a partir do repositório mq-metric-samples; pode levar alguns minutos):
+The first time (or when you change the collector version), build the **mq_prometheus** image (built from the mq-metric-samples repo; may take a few minutes):
 
 ```bash
 docker compose build mq_prometheus
 ```
 
-Depois suba a pilha:
+Then start the stack:
 
 ```bash
 docker compose up -d
 ```
 
-Aguarde o healthcheck do MQ (~30s). O mq_prometheus usa o usuário **admin** (canal DEV.ADMIN.SVRCONN) para acessar filas de sistema e publicações; a senha está em `mq-prometheus/mq_prometheus.yaml`. Se alterar `secrets/mqAdminPassword`, atualize o campo `password` no YAML. Depois:
+Wait for the MQ healthcheck (~30s). The mq_prometheus collector uses the **admin** user (channel DEV.ADMIN.SVRCONN) to access system queues and publications; the password is in `mq-prometheus/mq_prometheus.yaml`. If you change `secrets/mqAdminPassword`, update the `password` field in that YAML. Then:
 
 - **Grafana**: http://localhost:3000 (admin / admin)
 - **Prometheus**: http://localhost:9090
-- **IBM MQ Web Console**: https://localhost:9443/ibmmq/console (admin / passw0rd; aceitar certificado)
-- **Métricas MQ (raw)**: http://localhost:9157/metrics
+- **IBM MQ Web Console**: https://localhost:9443/ibmmq/console (admin / passw0rd; accept the certificate)
+- **MQ raw metrics**: http://localhost:9157/metrics
 
-### 3. Verificar métricas do MQ
+### 3. Check MQ metrics
 
 ```bash
 make metrics
-# ou
+# or
 curl -s http://localhost:9157/metrics | head -100
 ```
 
-No Prometheus (http://localhost:9090), use **Explore** e filtre por `ibmmq_` para ver as métricas do queue manager.
+In Prometheus (http://localhost:9090), use **Explore** and filter by `ibmmq_` to see queue manager metrics.
 
-### 4. Dashboard IBM MQ no Grafana
+### 4. IBM MQ dashboard in Grafana
 
-Um dashboard com as métricas do IBM MQ é **carregado automaticamente** via provisioning:
+A dashboard for IBM MQ metrics is **loaded automatically** via provisioning:
 
-1. Acesse http://localhost:3000 e faça login (admin / admin).
-2. No menu lateral: **Dashboards** → pasta **IBM MQ** → **IBM MQ – Métricas do Queue Manager**.
+1. Open http://localhost:3000 and log in (admin / admin).
+2. In the sidebar: **Dashboards** → **IBM MQ** folder → **IBM MQ – Queue Manager Metrics**.
 
-O dashboard inclui:
+The dashboard includes:
 
-- **Visão geral**: CPU (1/5/15 min), RAM livre, CPU user/system, uso de RAM do QM.
-- **Operações MQI**: taxa de Put/Get, commits/rollbacks, conexões e MQOPEN/MQCLOSE.
-- **Mensagens**: throughput em bytes, mensagens persistentes/não persistentes, pub/sub.
-- **Sistema de arquivos e log**: espaço livre em disco (QM, log, errors), latência do log, uso em bytes.
-- **Falhas e erros**: failed MQPUT/MQGET/MQCONN/MQOPEN, mensagens expiradas, FDC.
-- **Outras MQI**: MQCTL, MQINQ, MQSET, MQCB, browse e purge.
-- **Canais e conexões**: conexões ativas ao QM, taxa de conexões/desconexões, MQOPEN/MQCLOSE; o **mq_prometheus** expõe métricas por canal (ex.: `ibmmq_chl_status`).
-- **Lag / profundidade das filas**: gráficos do **mq_prometheus** — profundidade atual e máxima por fila (`ibmmq_q_depth`, `ibmmq_q_attribute_max_depth`), uso da capacidade (%), handles de leitura/escrita, contagem de filas monitoradas.
+- **Overview**: CPU (1/5/15 min), free RAM, user/system CPU, QM RAM usage.
+- **MQI operations**: Put/Get rate, commits/rollbacks, connections and MQOPEN/MQCLOSE.
+- **Messages**: throughput in bytes, persistent/non-persistent messages, pub/sub.
+- **Filesystem and log**: free disk space (QM, log, errors), log latency, usage in bytes.
+- **Failures and errors**: failed MQPUT/MQGET/MQCONN/MQOPEN, expired messages, FDC.
+- **Other MQI**: MQCTL, MQINQ, MQSET, MQCB, browse and purge.
+- **Channels and connections**: active connections to the QM, connection/disconnection rate, MQOPEN/MQCLOSE; **mq_prometheus** exposes per-channel metrics (e.g. `ibmmq_channel_status`, `ibmmq_channel_status_squash`).
+- **Queue lag / depth**: **mq_prometheus** panels — current and max depth per queue (`ibmmq_queue_depth`, `ibmmq_queue_attribute_max_depth`), capacity usage (%), read/write handles, number of monitored queues.
 
-Refresh padrão: 30s.
+Default refresh: 30s.
 
-### Como monitorar canal desconectado
+### Monitoring disconnected channels
 
-O endpoint nativo do container MQ (porta 9157) **não** expõe status por canal (Running / Inactive / Stopped / Retrying). Para ter a mesma visão da MQ Console (contagem por status e lista de canais com estado):
+The MQ container’s native endpoint (port 9157) **does not** expose per-channel status (Running / Inactive / Stopped / Retrying). To get the same view as the MQ Console (count by status and list of channels with state):
 
-1. **Use o exporter mq_prometheus** do repositório [mq-metric-samples](https://github.com/ibm-messaging/mq-metric-samples): ele conecta ao MQ como cliente, coleta métricas por canal e expõe em HTTP para o Prometheus (ex.: porta 9158).
-2. **Configure o Prometheus** para fazer scrape desse exporter (novo job apontando para a porta do mq_prometheus).
-3. **No Grafana:**
-   - **Painel de canais desconectados:** use a métrica exposta por canal (ex.: `ibmmq_chl_status` ou equivalente, com labels como `channel`, `status` ou `status_squash`). Canais desconectados = status diferente de RUNNING (ex.: Inactive, Stopped, Retrying). Exemplo de query: contar canais onde status não é RUNNING.
-   - **Alerta:** crie um alerta no Prometheus ou Grafana quando a contagem de canais “não running” for &gt; 0 (ex.: `count(ibmmq_chl_status) unless (status_squash=="RUNNING")` ou conforme os nomes reais das métricas do exporter).
+1. **Use the mq_prometheus exporter** from [mq-metric-samples](https://github.com/ibm-messaging/mq-metric-samples): it connects to MQ as a client, collects per-channel metrics and exposes them over HTTP for Prometheus (e.g. port 9158).
+2. **Configure Prometheus** to scrape that exporter (job pointing at the mq_prometheus port).
+3. **In Grafana:**
+   - **Disconnected channels panel:** use the per-channel metric (e.g. `ibmmq_channel_status` or `ibmmq_channel_status_squash` with labels like `channel`, `connname`, `qmgr`). Disconnected = status not RUNNING (e.g. Inactive, Stopped, Retrying). Example: count channels where status is not RUNNING.
+   - **Alert:** create a Prometheus or Grafana alert when the count of “not running” channels is &gt; 0 (e.g. using the metric names exposed by your exporter).
 
-Com isso você consegue monitorar “tenho canal desconectado” da mesma forma que na tela da MQ Console (Inactive, Stopped, Retrying). ### Alertas (Prometheus)
+That gives you “do I have a disconnected channel?” in the same way as the MQ Console (Inactive, Stopped, Retrying).
 
-O Prometheus está configurado com **regras de alerta** baseadas nas métricas do IBM MQ. Os alertas são avaliados a cada 30s; quando a condição é satisfeita por mais do que o `for` da regra, o alerta fica em **Firing**.
+### Alerts (Prometheus)
 
-**Onde ver:** Prometheus → **Status** → **Alerts** (http://localhost:9090/alerts). Alertas em Firing aparecem em vermelho.
+Prometheus is configured with **alert rules** based on IBM MQ metrics. Rules are evaluated every 30s; when the condition holds for longer than the rule’s `for`, the alert goes to **Firing**.
 
-**Regras incluídas** (`prometheus/alerts/ibmmq.yml`): **IBMMQDown** (QM inacessível), **MQPrometheusDown** (collector mq_prometheus inacessível), **IBMMQHighCPU**, **IBMMQLowRAM**, **IBMMQLowDiskQM**, **IBMMQLowDiskLog**, **IBMMQFailedConnections**, **IBMMQFailedPut**, **IBMMQFailedGet**, **IBMMQLogWriteLatencyHigh**, **IBMMQQueueDepthHigh**, **IBMMQQueueDepthCritical**, **IBMMQQueueDepthNearMax**. Para notificações (Slack, email), adicione o Alertmanager. No Grafana: **Edit** no painel → **Alert** → **Create alert rule** com a métrica desejada.
+**Where to see them:** Prometheus → **Status** → **Alerts** (http://localhost:9090/alerts). Firing alerts are shown in red.
 
-**Lag das filas e alertas:** esta POC inclui o **mq_prometheus** (mq-metric-samples), que expõe `ibmmq_q_depth` e `ibmmq_q_attribute_max_depth` por fila. O Prometheus faz scrape em `mq_prometheus:9158`. Os alertas **IBMMQQueueDepthHigh** (depth > 500 por 5 min), **IBMMQQueueDepthCritical** (depth > 5000 por 2 min) e **IBMMQQueueDepthNearMax** (profundidade > 80% do máximo) disparam quando o lag fica alto.
+**Included rules** (`prometheus/alerts/ibmmq.yml`): **IBMMQDown** (QM unreachable), **MQPrometheusDown** (mq_prometheus collector unreachable), **IBMMQHighCPU**, **IBMMQLowRAM**, **IBMMQLowDiskQM**, **IBMMQLowDiskLog**, **IBMMQFailedConnections**, **IBMMQFailedPut**, **IBMMQFailedGet**, **IBMMQLogWriteLatencyHigh**, **IBMMQQueueDepthHigh**, **IBMMQQueueDepthCritical**, **IBMMQQueueDepthNearMax**. For notifications (Slack, email), add Alertmanager. In Grafana: **Edit** on a panel → **Alert** → **Create alert rule** with the desired metric.
 
-**Onde visualizar os alertas de lag:**
-1. **Grafana** — No dashboard **IBM MQ – Métricas do Queue Manager**, na seção **Lag / profundidade das filas**, o painel **"Alertas de lag (firing)"** mostra em tempo real quais alertas estão em firing.
-2. **Prometheus** — **Status → Alerts** (http://localhost:9090/alerts): lista todos os alertas (Pending e Firing) com fila, valor e descrição.
+**Queue lag and alerts:** this POC uses **mq_prometheus** (mq-metric-samples), which exposes `ibmmq_queue_depth` and `ibmmq_queue_attribute_max_depth` per queue. Prometheus scrapes `mq_prometheus:9158`. Alerts **IBMMQQueueDepthHigh** (depth &gt; 500 for 5 min), **IBMMQQueueDepthCritical** (depth &gt; 5000 for 2 min) and **IBMMQQueueDepthNearMax** (depth &gt; 80% of max) fire when lag is high.
 
-Ajuste os limites em `prometheus/alerts/ibmmq.yml` (grupo `ibmmq_queue_lag`) conforme sua necessidade.
+**Where to see lag alerts:**
+1. **Grafana** — In the **IBM MQ – Queue Manager Metrics** dashboard, section **Lag / queue depth**, the **“Lag alerts (firing)”** panel shows which alerts are currently firing.
+2. **Prometheus** — **Status → Alerts** (http://localhost:9090/alerts): full list (Pending and Firing) with queue, value and description.
 
-### Painéis com "No data" (filas/canais) — troubleshooting
+Adjust thresholds in `prometheus/alerts/ibmmq.yml` (group `ibmmq_queue_lag`) as needed.
 
-**Você não perdeu informações.** O mq_prometheus (mq-metric-samples) expõe **o mesmo ou mais** que o exporter antigo: profundidade por fila (`ibmmq_q_depth`), capacidade máxima (`ibmmq_q_attribute_max_depth`), handles de leitura/escrita (`ibmmq_q_input_handles`, `ibmmq_q_output_handles`), idade da mensagem mais antiga (`ibmmq_q_oldest_message_age`), **além de** status de canais (`ibmmq_chl_status`, `ibmmq_chl_status_squash`). O "No data" indica falha na **coleta ou configuração**, não ausência de métricas no exporter.
+### Panels showing “No data” (queues/channels) — troubleshooting
 
-Para diagnosticar:
+**You’re not missing metrics.** The mq_prometheus (mq-metric-samples) exporter exposes **the same or more** than the old exporter: depth per queue (`ibmmq_queue_depth`), max capacity (`ibmmq_queue_attribute_max_depth`), read/write handles (`ibmmq_queue_input_handles`, `ibmmq_queue_output_handles`), oldest message age (`ibmmq_queue_oldest_message_age`), **plus** channel status (`ibmmq_channel_status`, `ibmmq_channel_status_squash`). “No data” usually means a **collection or configuration** issue, not missing metrics in the exporter.
 
-1. **Collector mq_prometheus está UP?** No topo do dashboard, o painel "mq_prometheus (métricas por fila)" deve mostrar UP (verde). Se mostrar DOWN, o container não está respondendo na porta 9158.
-2. **Métricas do collector no host:**  
-   `curl -s http://localhost:9158/metrics | grep -E "^ibmmq_q_|^ibmmq_chl_" | head -30`  
-   Se retornar linhas com `ibmmq_q_depth`, `ibmmq_chl_status_squash`, etc., o collector está expondo dados; o problema pode ser o Prometheus não estar fazendo scrape ou o Grafana usando outro datasource/intervalo.
-3. **Prometheus está raspando?** Em http://localhost:9090/targets verifique se o target `mq_prometheus` (job `mq_prometheus`) está **UP** e se há erros de scrape.
-4. **Logs do mq_prometheus:**  
+To troubleshoot:
+
+1. **Is the mq_prometheus collector UP?** At the top of the dashboard, the “mq_prometheus (per-queue metrics)” panel should show UP (green). If DOWN, the container is not responding on port 9158.
+2. **Collector metrics on the host:**  
+   `curl -s http://localhost:9158/metrics | grep "^ibmmq_" | head -30`  
+   If you see lines like `ibmmq_queue_depth`, `ibmmq_channel_status_squash`, etc., the collector is exposing data; the issue may be Prometheus not scraping or Grafana using a different datasource/interval.
+3. **Is Prometheus scraping?** At http://localhost:9090/targets check that the `mq_prometheus` target (job `mq_prometheus`) is **UP** and there are no scrape errors.
+4. **mq_prometheus logs:**  
    `docker compose logs mq_prometheus`  
-   Procure por "Connected to queue manager", erros de conexão (host/porta, usuário/senha) ou falha ao descobrir filas. O host do QM deve ser o nome do serviço Docker: `ibmmq` (já configurado em `connName: ibmmq(1414)` em `mq-prometheus/mq_prometheus.yaml`).
-5. **Build da imagem:** A primeira vez exige `docker compose build mq_prometheus` (build a partir do GitHub; pode levar vários minutos). Se o build falhar, os painéis de fila/canal ficarão sem dados.
-6. **MQRC_NOT_AUTHORIZED (2035) ao abrir SYSTEM.ADMIN.COMMAND.QUEUE:** o collector precisa de um usuário com permissão em filas de sistema (ex.: **admin**). Em `mq-prometheus/mq_prometheus.yaml` use `channel: DEV.ADMIN.SVRCONN` e `user: admin` (senha igual à do secret mqAdminPassword).
-7. **Endpoint OK mas nenhuma métrica ibmmq_q_* / ibmmq_chl_*:** não é bug do exporter. O mq_prometheus preenche essas métricas quando (a) recebe publicações do QM nos tópicos $SYS e (b) consegue executar DISPLAY QSTATUS/CHSTATUS (object status). Aguarde **1–2 minutos** após o container subir (a primeira leva de publicações pode demorar). Se continuar vazio: em `mq_prometheus.yaml` ponha `logLevel: DEBUG`, reinicie o container e rode `docker compose logs mq_prometheus` — procure por erros de subscrição, "Connected to queue manager", e mensagens de descoberta de filas/canais.
+   Look for “Connected to queue manager”, connection errors (host/port, user/password) or queue discovery failures. The QM host must be the Docker service name: `ibmmq` (already set as `connName: ibmmq(1414)` in `mq-prometheus/mq_prometheus.yaml`).
+5. **Image build:** The first run requires `docker compose build mq_prometheus` (build from GitHub; can take several minutes). If the build fails, queue/channel panels will have no data.
+6. **MQRC_NOT_AUTHORIZED (2035) opening SYSTEM.ADMIN.COMMAND.QUEUE:** the collector needs a user with access to system queues (e.g. **admin**). In `mq-prometheus/mq_prometheus.yaml` use `channel: DEV.ADMIN.SVRCONN` and `user: admin` (password must match the mqAdminPassword secret).
+7. **Endpoint OK but no ibmmq_queue_* / ibmmq_channel_* metrics:** not an exporter bug. mq_prometheus fills those metrics when (a) it receives QM publications on $SYS topics and (b) it can run DISPLAY QSTATUS/CHSTATUS (object status). Wait **1–2 minutes** after the container starts (the first batch of publications can be delayed). If still empty: set `logLevel: DEBUG` in `mq_prometheus.yaml`, restart the container and run `docker compose logs mq_prometheus` — look for subscription errors, “Connected to queue manager”, and queue/channel discovery messages.
 
-## Comandos úteis
+## Useful commands
 
-| Comando     | Descrição                    |
-|------------|------------------------------|
-| **`make demo`** | **Faz tudo:** cria secrets, build do app, sobe IBM MQ + Prometheus + Grafana + **producer em loop** (5 msgs a cada 20s) + **consumer em loop**. Produz e consome enquanto estiver no ar. |
-| `make up`  | Sobe só a pilha (MQ, Prometheus, Grafana), sem producer/consumer contínuos |
-| `make down`| Para e remove todos os containers (inclui os do demo) |
-| `make logs`| Acompanha os logs            |
-| `make status` | Lista o status dos serviços |
-| `make metrics` | Mostra amostra do endpoint /metrics do MQ (porta 9157) |
-| `make metrics-mq-prometheus` | Mostra amostra das métricas do mq_prometheus (porta 9158; filas/canais) — útil se os painéis de fila/canal mostrarem "No data" |
+| Command | Description |
+|--------|--------------|
+| **`make demo`** | **Full demo:** creates secrets, builds the app, starts IBM MQ + Prometheus + Grafana + **loop producer** (5 msgs every 20s) + **loop consumer**. Produces and consumes while running. |
+| `make up` | Starts only the stack (MQ, Prometheus, Grafana), no continuous producer/consumer |
+| `make down` | Stops and removes all containers (including demo ones) |
+| `make logs` | Follow logs |
+| `make status` | List service status |
+| `make metrics` | Shows a sample of the MQ /metrics endpoint (port 9157) |
+| `make metrics-mq-prometheus` | Shows a sample of mq_prometheus metrics (port 9158; queues/channels) — useful when queue/channel panels show “No data” |
 
-## Producer e Consumer (fila DEV.QUEUE.1)
+## Producer and consumer (queue DEV.QUEUE.1)
 
-Há uma aplicação Java (JMS) que envia e consome mensagens na fila **DEV.QUEUE.1**:
+A Java (JMS) application sends and consumes messages on queue **DEV.QUEUE.1**:
 
-- **Producer**: envia mensagens de texto para a fila.
-- **Consumer**: consome mensagens da fila (encerra após alguns segundos sem nova mensagem).
+- **Producer**: sends text messages to the queue.
+- **Consumer**: consumes messages from the queue (exits after a few seconds with no new message).
 
-Com o MQ no ar (`docker compose up -d`), em um terminal rode o consumer e em outro o producer:
+With MQ running (`docker compose up -d`), run the consumer in one terminal and the producer in another:
 
 ```bash
 cd app
-# Terminal 1 – consumer (espera mensagens)
+# Terminal 1 – consumer (waits for messages)
 mvn exec:java -Dexec.mainClass="com.poc.mq.Consumer"
 
-# Terminal 2 – producer (envia 5 mensagens)
+# Terminal 2 – producer (sends 5 messages)
 mvn exec:java -Dexec.mainClass="com.poc.mq.Producer"
 ```
 
-Configuração via variáveis de ambiente: `MQ_HOST`, `MQ_PORT`, `MQ_QUEUE`, `MQ_USER`, `MQ_PASSWORD`, etc. (defaults: localhost:1414, DEV.QUEUE.1, app/passw0rd). Ver `app/README.md`.
+Configuration via environment variables: `MQ_HOST`, `MQ_PORT`, `MQ_QUEUE`, `MQ_USER`, `MQ_PASSWORD`, etc. (defaults: localhost:1414, DEV.QUEUE.1, app/passw0rd). See `app/README.md`.
 
-### Por que a profundidade da fila (lag) cresce no demo?
+### Why does queue depth (lag) grow in the demo?
 
-No **demo** (`make demo`), o **producer-loop** envia **100 mensagens** por janela e espera **3–15 s** entre janelas; o **consumer-loop** consome **uma mensagem por vez** e, após 25 s sem mensagem, encerra e espera 2 s antes de reconectar. Ou seja:
+In the **demo** (`make demo`), the **producer-loop** sends **100 messages** per batch and waits **3–15 s** between batches; the **consumer-loop** consumes **one message at a time** and, after 25 s with no message, exits and waits 2 s before reconnecting. So:
 
-- **Producer:** ~100 msgs a cada ~9 s em média → picos de 100 mensagens.
-- **Consumer:** 1 consumer, 1 mensagem por `receive()`; entre ciclos há 2 s de pausa.
+- **Producer:** ~100 msgs every ~9 s on average → spikes of 100 messages.
+- **Consumer:** one consumer, one message per `receive()`; 2 s pause between cycles.
 
-Com isso o producer tende a colocar mensagens na fila mais rápido do que um único consumer consegue drenar. **Profundidade em 5k (ou mais) é esperada** com o demo rodando por um tempo — producer e consumer estão operando corretamente; o desbalanceamento é de throughput.
+So the producer tends to put messages on the queue faster than a single consumer can drain it. **Depth at 5k (or more) is expected** if the demo runs for a while — producer and consumer are working; the imbalance is in throughput.
 
-**Para reduzir o lag:**
+**To reduce lag:**
 
-1. **Só drenar (sem produzir):** pare o producer (`docker compose stop producer-loop`) e deixe só o consumer rodando até a fila baixar.
-2. **Equilibrar o demo:** reduza o batch ou aumente o intervalo do producer (ex.: `Producer random 30 10 20` = 30 msgs a cada 10–20 s) ou rode mais de um consumer (vários `consumer-loop` ou várias instâncias manuais).
-3. **Limpar a fila:** na MQ Console (https://localhost:9443/ibmmq/console), na fila DEV.QUEUE.1 use **Clear** (purge) se quiser zerar o backlog.
+1. **Drain only (no produce):** stop the producer (`docker compose stop producer-loop`) and let only the consumer run until the queue drains.
+2. **Balance the demo:** reduce batch size or increase producer interval (e.g. `Producer random 30 10 20` = 30 msgs every 10–20 s) or run more consumers (multiple `consumer-loop` or manual instances).
+3. **Clear the queue:** in the MQ Console (https://localhost:9443/ibmmq/console), on queue DEV.QUEUE.1 use **Clear** (purge) to reset the backlog.
 
-## Estrutura do projeto
+## Project structure
 
 ```
 .
-├── app/                     # Producer e consumer Java (JMS)
+├── app/                     # Java (JMS) producer and consumer
 │   ├── pom.xml
 │   ├── README.md
 │   └── src/main/java/com/poc/mq/
@@ -189,32 +191,32 @@ Com isso o producer tende a colocar mensagens na fila mais rápido do que um ún
 │       ├── Producer.java
 │       └── Consumer.java
 ├── docker-compose.yml
-├── mq-prometheus/            # mq_prometheus (ibm-messaging/mq-metric-samples): mq_prometheus.yaml (filas, QM, canal, porta 9158)
+├── mq-prometheus/            # mq_prometheus (ibm-messaging/mq-metric-samples): mq_prometheus.yaml (queues, QM, channel, port 9158)
 ├── prometheus/
-│   ├── prometheus.yml       # scrape e rule_files
+│   ├── prometheus.yml       # scrape config and rule_files
 │   └── alerts/
-│       └── ibmmq.yml        # regras de alerta (CPU, disco, falhas MQI, etc.)
+│       └── ibmmq.yml        # alert rules (CPU, disk, MQI failures, etc.)
 ├── grafana/
 │   └── provisioning/
 │       ├── datasources/
 │       │   └── datasources.yml
 │       └── dashboards/
-│           ├── dashboards.yml    # provider que carrega a pasta default/
+│           ├── dashboards.yml    # provider that loads the default/ folder
 │           └── default/
-│               └── ibmmq-metrics.json   # dashboard IBM MQ
-├── secrets/                 # mqAdminPassword, mqAppPassword (não versionados)
+│               └── ibmmq-metrics.json   # IBM MQ dashboard
+├── secrets/                 # mqAdminPassword, mqAppPassword (not versioned)
 ├── Makefile
 └── README.md
 ```
 
-## Métricas do IBM MQ (exemplos)
+## IBM MQ metrics (examples)
 
-Com `MQ_ENABLE_METRICS=true`, o container expõe métricas no formato Prometheus, por exemplo:
+With `MQ_ENABLE_METRICS=true`, the container exposes Prometheus-format metrics, for example:
 
-- `ibmmq_qmgr_*` – queue manager (commits, CPU, chamadas MQI, etc.)
-- Outras métricas de sistema publicadas pelo MQ (consulte a [documentação IBM](https://www.ibm.com/docs/en/ibm-mq/9.4.x?topic=operator-metrics-published-by-mq-container)).
+- `ibmmq_qmgr_*` – queue manager (commits, CPU, MQI calls, etc.)
+- Other system metrics published by MQ (see [IBM documentation](https://www.ibm.com/docs/en/ibm-mq/9.4.x?topic=operator-metrics-published-by-mq-container)).
 
-## Referências
+## References
 
 - [IBM MQ container image](https://github.com/ibm-messaging/mq-container)
 - [Monitoring when using the IBM MQ Operator](https://www.ibm.com/docs/en/ibm-mq/9.4.x?topic=operator-monitoring-when-using-mq)
